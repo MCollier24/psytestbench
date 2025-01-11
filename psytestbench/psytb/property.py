@@ -1,4 +1,4 @@
-'''
+"""
 Created on Jun 2, 2023
 
 @author: Pat Deegan
@@ -15,60 +15,64 @@ Created on Jun 2, 2023
 
 You should have received a copy of the GNU General Public License along with psytestbench. 
 If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
-import easy_scpi as scpi 
+import easy_scpi as scpi
+
 
 class PropertyWrapper:
-    
-    def __init__(self, rawProperty:scpi.scpi_instrument.Property):
+
+    def __init__(self, rawProperty: scpi.scpi_instrument.Property):
         self._property = rawProperty
-    
-    @property 
+
+    @property
     def currentValue(self):
         return self.prop()
-    
-    @property 
+
+    @property
     def prop(self):
         return self._property
 
-    
-    def getSetFloat(self, targetProperty:scpi.scpi_instrument.Property, val:float=None):
+    def getSetFloat(
+        self, targetProperty: scpi.scpi_instrument.Property, val: float = None
+    ):
         if val is None:
             return float(targetProperty())
         return targetProperty(val)
 
-    def getSetInt(self, targetProperty:scpi.scpi_instrument.Property, val:int=None):
+    def getSetInt(self, targetProperty: scpi.scpi_instrument.Property, val: int = None):
         if val is None:
             return int(targetProperty())
         return targetProperty(val)
-    
-    def getSetString(self, targetProperty:scpi.scpi_instrument.Property, val:str=None):
+
+    def getSetString(
+        self, targetProperty: scpi.scpi_instrument.Property, val: str = None
+    ):
         if val is None:
             return targetProperty()
-        
         return targetProperty(val)
-    def activateBoolean(self, targetProperty:scpi.scpi_instrument.Property, activate:bool=None):
-        
+
+    def activateBoolean(
+        self, targetProperty: scpi.scpi_instrument.Property, activate: bool = None
+    ):
+
         if activate is None:
-            if int(targetProperty()):
-                return True 
+            response = targetProperty()
+            if response.isdecimal() and int(response):
+                return True
+            elif response == "ON":
+                return True
             else:
                 return False
-        
+
         v = 0
         if activate:
             v = 1
         return targetProperty(v)
-    
+
 
 class IndexedProperty(PropertyWrapper):
-    
-    def __init__(self, propid:int, rawProperty:scpi.scpi_instrument.Property):
+
+    def __init__(self, propid: int, rawProperty: scpi.scpi_instrument.Property):
         super().__init__(rawProperty)
         self.id = propid
-    
-    
-    
-    
-    

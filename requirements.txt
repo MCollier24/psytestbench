@@ -1,3 +1,4 @@
 pyvisa
 hid
 serial
+easy-scpi

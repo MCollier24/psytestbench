@@ -1,4 +1,4 @@
-'''
+"""
 Created on Jun 3, 2023
 
 @author: Pat Deegan
@@ -15,140 +15,149 @@ Created on Jun 3, 2023
 
 You should have received a copy of the GNU General Public License along with psytestbench. 
 If not, see <https://www.gnu.org/licenses/>.
-'''
+"""
 
 from psytestbench.psytb.instrument_roles.role import InstrumentRole
 import psytestbench.psytb.instrument_roles as roles
 from psytestbench.psytb.instrument.type import InstrumentType
 from psytestbench.psytb.instrument.instrument import Instrument as InstrumentBase
 
-import logging 
+import logging
+
 log = logging.getLogger(__name__)
+
+
 class LabInstruments:
-    
-    def __init__(self, typeIdTuplesList:list, autoconnect=True):
-        '''
-            @param typeIdTuplesList: a list of (TYPE, 'identifier') tuples for instruments
-            @param autoconnect: optional (default True) connect on construct
-              
-            A simple container for a collection of lab instruments of various types.
-            
-            Assuming they have been configured and are available, the instrument 
-            collection supports 4 types of instruments, accessible as attributes
-            which will be lazy-initialized (and connected to, according to autoconnect):
-            
-                Power:          lab.powerSupply or lab.psu
-                Sig gen:        lab.signalGenerator
-                o-scope:        lab.oscilloscope or lab.dso
-                DMM:            lab.multimeter or lab.dmm
-            
-            It is good form and wise to call
-                myLab.disconnect()
-            prior to ending a program, to cleanly disconnect from any active devices.
-            
-            @see: examples/mylab.py and examples/console.py
-        
-        '''
+
+    def __init__(self, typeIdTuplesList: list, autoconnect=True):
+        """
+        @param typeIdTuplesList: a list of (TYPE, 'identifier') tuples for instruments
+        @param autoconnect: optional (default True) connect on construct
+
+        A simple container for a collection of lab instruments of various types.
+
+        Assuming they have been configured and are available, the instrument
+        collection supports 5 types of instruments, accessible as attributes
+        which will be lazy-initialized (and connected to, according to autoconnect):
+
+            Power:          lab.powerSupply or lab.psu
+            Sig gen:        lab.signalGenerator
+            o-scope:        lab.oscilloscope or lab.dso
+            DMM:            lab.multimeter or lab.dmm
+            E-Load:         lab.electronicLoad
+
+        It is good form and wise to call
+            myLab.disconnect()
+        prior to ending a program, to cleanly disconnect from any active devices.
+
+        @see: examples/mylab.py and examples/console.py
+
+        """
         self._instDetails = []
         for ttup in typeIdTuplesList:
             self._instDetails.append(InstrumentType(ttup[0], ttup[1]))
-            
+
         self.autoconnect = autoconnect
-        self._dso = None 
-        self._siggen = None 
-        self._benchsupply = None 
-        self._dmm = None 
-        
-        
-    def hasInstrumentRole(self, roleType:InstrumentRole) -> InstrumentType:
+        self._dso = None
+        self._siggen = None
+        self._benchsupply = None
+        self._dmm = None
+        self._eload = None
+
+    def hasInstrumentRole(self, roleType: InstrumentRole) -> InstrumentType:
         for instType in self._instDetails:
             if instType.hasRole(roleType):
                 return instType
-            
+
         return None
-        
+
     def generateInstrument(self, ofType):
         instType = self.hasInstrumentRole(ofType)
         if instType is None:
-            log.warn(f'No info found to generate {ofType} instrument')
+            log.warn(f"No info found to generate {ofType} instrument")
             return None
-        
+
         try:
-            newInst =  instType.construct()
+            newInst = instType.construct()
         except RuntimeError as e:
-            log.error(f'Failed to construct device!\n{e}')
+            log.error(f"Failed to construct device!\n{e}")
             return None
         if self.autoconnect:
-            log.info(f'Connection (auto) to newly constructed {newInst}')
+            log.info(f"Connection (auto) to newly constructed {newInst}")
             try:
                 newInst.connect()
             except:
-                log.error(f'Failed to connect to device!')
+                log.error(f"Failed to connect to device!")
         return newInst
-            
-        
-        
-    
+
     def disconnect(self):
         instruments = [
-                self._dso,
-                self._siggen,
-                self._benchsupply,
-                self._dmm,
-            ]
-        
+            self._dso,
+            self._siggen,
+            self._benchsupply,
+            self._dmm,
+        ]
+
         for inst in instruments:
             if inst is not None and inst.is_connected:
-                log.info(f'Disconnecting {inst}')
+                log.info(f"Disconnecting {inst}")
                 inst.disconnect()
-                
-                
+
     def hasOscilloscope(self):
         return self.hasInstrumentRole(roles.Oscilloscope)
+
     def hasSignalGenerator(self):
         return self.hasInstrumentRole(roles.SignalGenerator)
+
     def hasPowerSupply(self):
         return self.hasInstrumentRole(roles.PowerSupply)
-    
+
     def hasMultimeter(self):
         return self.hasInstrumentRole(roles.MultiMeter)
-    
-    @property 
+
+    def hasElectronicLoad(self):
+        return self.hasInstrumentRole(roles.ElectronicLoad)
+
+    @property
     def dso(self) -> InstrumentBase:
         return self.oscilloscope
-    
-    @property 
+
+    @property
     def oscilloscope(self) -> InstrumentBase:
         if self._dso is None:
             self._dso = self.generateInstrument(roles.Oscilloscope)
-        return self._dso 
-    
-    @property 
+        return self._dso
+
+    @property
     def signalGenerator(self) -> InstrumentBase:
-        
+
         if self._siggen is None:
             self._siggen = self.generateInstrument(roles.SignalGenerator)
-            
+
         return self._siggen
-    
-    
-    @property 
+
+    @property
     def psu(self) -> InstrumentBase:
         return self.powerSupply
-    @property 
-    def powerSupply(self)  -> InstrumentBase:
+
+    @property
+    def powerSupply(self) -> InstrumentBase:
         if self._benchsupply is None:
             self._benchsupply = self.generateInstrument(roles.PowerSupply)
         return self._benchsupply
-    
-    @property 
-    def dmm(self)  -> InstrumentBase:
+
+    @property
+    def dmm(self) -> InstrumentBase:
         return self.multimeter
-    
-    @property 
-    def multimeter(self)  -> InstrumentBase:
+
+    @property
+    def multimeter(self) -> InstrumentBase:
         if self._dmm is None:
             self._dmm = self.generateInstrument(roles.MultiMeter)
         return self._dmm
-    
-    
+
+    @property
+    def electornicLoad(self) -> InstrumentBase:
+        if self._eload is None:
+            self._eload = self.generateInstrument(roles.ElectronicLoad)
+        return self._eload
